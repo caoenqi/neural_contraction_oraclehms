@@ -6,26 +6,6 @@ from functools import partial
 from time import perf_counter
 
 
-class NestedIntervals:
-    """
-    Default perturbation generator for NCMTrainer.
-
-    Returns irx.icentpert(center, (i + 1) * pert) for level i, so that
-    level 0 is the smallest region and each subsequent level expands by pert.
-
-    Args:
-        center: center point of the interval (e.g. x_eq or x_lin)
-        pert: base perturbation half-widths; level i uses (i+1) * pert
-    """
-
-    def __init__(self, center, pert):
-        self.center = center
-        self.pert = pert
-
-    def __call__(self, i):
-        return irx.icentpert(self.center, (i + 1) * self.pert)
-
-
 class NCMTrainer:
     """
     General Neural Contraction Metric (NCM) trainer.
@@ -44,7 +24,7 @@ class NCMTrainer:
         control_fn: callable(x, control_net) -> u
         a: lower bound on metric eigenvalues (M >= a I)
         b: upper bound on metric eigenvalues (M <= b I)
-        c: contraction rate numerator (contracts at rate c/b)
+        c: contraction rate
         partition_indices: state indices to partition in the loss.
             If None, partitions all dimensions.
         device: JAX backend ("gpu" or "cpu")
@@ -177,8 +157,7 @@ class NCMTrainer:
             params: (ncm_net, control_net) tuple
             optim: optax optimizer
             ix_gen: callable(i: int) -> interval; returns the training region
-                for perturbation level i. Use NestedIntervals for the default
-                expanding-box scheme.
+                for perturbation level i.
             key: JAX PRNGKey for sample_loss randomness
             num_pert: stop after this many pert levels verified
             steps: maximum training steps

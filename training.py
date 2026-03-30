@@ -28,7 +28,7 @@ jit = partial(eqx.filter_jit, backend=device)
 sys = Quadrotor()
 print(sys.f(0.0, x_eq, u_eq))
 
-# Derive a, b, c from the LQR initialization (50% reduction/bloating)
+# Hyperparameters for training
 a = 0.01
 b = 100.0
 c = 0.001
