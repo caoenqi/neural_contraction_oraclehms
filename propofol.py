@@ -6,8 +6,7 @@ import immrax as irx
 from control import lqr
 from pathlib import Path
 import csv
-
-g = 9.81
+from scipy.linalg import null_space
 
 BASE = Path(".")
 
@@ -17,7 +16,7 @@ CONTROLLER = BASE / "Controller"
 
 class HRPropofol(irx.System):
     def __init__ (self, params, scaling=1.0) :
-        self.xlen = 11
+        self.xlen = 10
         self.evolution = 'continuous'
         self.scaling = scaling # should either be a single float or an array of length 11 for state-wise scaling
 
@@ -63,6 +62,7 @@ class HRPropofol(irx.System):
         self.Vv0 = 0.7 * self.V0
         self.Pv0 = 6.0
         self.Vp0 = self.V0 - (self.H0 * self.V0)
+        self.Vr = params['Vr_ss'] # for now, assume red blood cell count is constant
 
         # Unstressed Volume
         self.Vu0 = self.Vv0 - (self.Pv0 / self.Kv)
@@ -81,14 +81,16 @@ class HRPropofol(irx.System):
         # - `m1,m2,m3`: propofol PK compartment masses           **[mg]**
         # - `Ce`     : propofol effect-site concentration        **[mg/L]**
         scaled_x = x / self.scaling
-        Va, Vv, Vr, rF, sR, Q, sVU, m1, m2, m3, Ce = scaled_x.ravel() # Q is part of y
+        Va, Vv, rF, sR, Q, sVU, m1, m2, m3, Ce = scaled_x.ravel() # Q is part of y
+        # For now, assume Vr is constant
         # Inputs
-        JI, JH, JP = u.ravel()
+        JI, JP = u.ravel()
+        # for now ignore JH
         # hct_add = hct_add[0]
         hct_add = 0 # for now, since it doesn't make sense to be nonzero atm
-
+        JH = 0 # also for now, since hemorrage effect is minor and it doesn't make sense to have this atm either
         # Constants / Calculations
-        H = Vr / (Va + Vv) # part of y
+        H = self.Vr / (Va + Vv) # part of y
 
         # Pressures
         # Pa = self.Pa0 + self.Ka * (Va - self.Va0) # part of y
@@ -122,23 +124,22 @@ class HRPropofol(irx.System):
         Va_dot = -(((Pa-Pv)/R) + JH + JF - Q) # flip sign because interval shenanigans
         # Vv_dot = -Q + ((Pa-Pv)/R) + JI
         Vv_dot = ((Pa-Pv)/R) + JI - Q # rearrange because interval shenanigans
-        Vr_dot = -JH*H + JI*hct_add # why is hct_add not considered an input u?
 
         # PK and PD propofol
         m1_dot = (-(self.k10+self.k12+self.k13)*m1+self.k21*m2+self.k31*m3+JP)
         m2_dot = (self.k12*m1-self.k21*m2)
         m3_dot = (self.k13*m1-self.k31*m3)
 
-        Vp = jnp.maximum(Va + Vv - Vr, 1e-9) # avoid divide-by-0
+        # Vp = jnp.maximum(Va + Vv - Vr, 1e-9) # avoid divide-by-0
+        Vp = Va + Vv - self.Vr # for now, remove maximum as it isn't in linbp_registry
         Ce_dot = (-self.ke0*Ce + (self.Vp0*self.ke0*m1)/(self.VD*Vp))
 
         # gamma = jax.lax.cond(Ce <= self.Ce50, lambda x: 1.89, lambda x: 1.47, False) # these two lines are probably gonna cause some interval issues
         # BIS = self.BIS0*(1-jnp.pow(Ce, gamma)/(jnp.pow(self.Ce50, gamma)+jnp.pow(Ce, gamma))) # part of y
 
-        final_outputs = [
+        return jnp.array([
             Va_dot,
             Vv_dot,
-            Vr_dot,
             rF_dot,
             sR_dot,
             Q_dot,
@@ -147,9 +148,7 @@ class HRPropofol(irx.System):
             m2_dot,
             m3_dot,
             Ce_dot
-            ]
-        
-        return jnp.array(final_outputs) * self.scaling
+            ]) * self.scaling
 
 
 # read parameter sets from csv
@@ -181,7 +180,7 @@ with open('Inputs.csv', mode='r') as infile:
         # print(i, row)
         if i > 0:
             # append to list
-            inputs.append([float(r) for r in row[1:]])
+            inputs.append([float(row[r]) for r in [1, 3]]) # for now, ignore JH
 inputs = jnp.array(inputs)
 
 
@@ -190,7 +189,6 @@ _sys = HRPropofol(cur_params)
 x_eq = jnp.array([
     cur_params["Va_ss"],
     cur_params["Vv_ss"],
-    cur_params["Vr_ss"],
     0.0,
     0.0,
     cur_params["Q_ss"],
@@ -200,20 +198,20 @@ x_eq = jnp.array([
     0.0,
     0.0
 ])
-u_eq = jnp.array([0.0, 0.0, 0.0])
+u_eq = jnp.array([0.0, 0.0])
 
 A_eq = jax.jacfwd(_sys.f, argnums=1)(0.0, x_eq, u_eq)
 B_eq = jax.jacfwd(_sys.f, argnums=2)(0.0, x_eq, u_eq)
-Q = jnp.diag(jnp.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
-R = jnp.eye(3)
+Q = jnp.diag(jnp.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
+R = jnp.eye(2)
 K_eq, S_eq, _ = lqr(A_eq, B_eq, Q, R)
 K_eq = -jnp.array(K_eq)
 Th_eq = jnp.asarray(cholesky(S_eq, upper=True))
-
+B_ann = null_space(B_eq.T).T#annihilator matrix for B, should be constant across all X as system is linear in JI/JP
 
 def ncm(x, ncm_net):
     # Killing field condition, no dependence in actuation directions
-    Th_flat = ncm_net(x[:-4])
+    Th_flat = ncm_net(jnp.dot(B_ann, x))
     Th = jnp.zeros((_sys.xlen, _sys.xlen), dtype=Th_flat.dtype)
     Th = Th.at[onp.triu_indices(_sys.xlen)].set(Th_flat)
     return Th + Th_eq

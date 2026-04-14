@@ -53,7 +53,7 @@ print("Initialized trainer")
 # ix_gen: linearly grows perturbation from 1% to 100% of max over num_pert levels.
 _interval_max = jnp.array([0.983568240,
 2.17185407,
-0.758232405,
+# 0.758232405, #ignoring Vr for now
 0.0,
 0.0,
 4.33893652,
@@ -66,7 +66,7 @@ _interval_max = jnp.array([0.983568240,
 _max_diff = _interval_max - x_eq
 _interval_min = jnp.array([0.0,
 0.0,
-0.0,
+# 0.0, #ignoring Vr for now
 -0.605837295,
 -948.155976,
 0.0,
@@ -101,7 +101,7 @@ print("Training...")
     optim,
     ix_gen,
     num_samples=0,
-    divs=9,
+    divs=1,
     steps=1_000_000,
     ix_save_path=CONTROLLER / "ix_ut.npy",
     num_pert=_num_levels,
