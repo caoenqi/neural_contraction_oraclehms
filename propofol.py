@@ -5,6 +5,7 @@ import numpy as onp
 import immrax as irx
 from control import lqr
 from pathlib import Path
+import csv
 
 g = 9.81
 

@@ -47,7 +47,7 @@ trainer = NCMTrainer(
     partition_indices=[6, 7, 8],
     device=device,
 )
-
+print("Initialized trainer")
 # %%
 
 # ix_gen: linearly grows perturbation from 1% to 100% of max over num_pert levels.
@@ -84,7 +84,7 @@ _num_levels = 100
 def ix_gen(i):
     alpha = i / _num_levels
     return irx.interval(x_eq + alpha * _min_diff, x_eq + alpha * _max_diff)
-
+print("Initialized ix_gen")
 
 # %%
 ncm_net = irx.NeuralNetwork(NCM, load=False)
@@ -95,6 +95,7 @@ control_net = control_net.loadzeros()
 params = (ncm_net, control_net)
 optim = optax.adamw(lr)
 
+print("Training...")
 (ncm_net, control_net), ix, perti = trainer.train(
     params,
     optim,
@@ -107,13 +108,13 @@ optim = optax.adamw(lr)
 )
 
 # %%
-
+print("Training complete.")
 ncm_net = irx.NeuralNetwork(NCM, load=True)
 control_net = irx.NeuralNetwork(CONTROLLER, load=True)
 
 aM, bM = trainer.get_bounds_iM(trainer.M_crown(ix, ncm_net))
 print(aM, bM)
 
-print(f"Valid: {aM > 0}, Metric contracts at rate {c}")
+print(f"Valid: {aM > 0}, Metric contracts at rate {c}.")
 
 # %%
