@@ -224,7 +224,7 @@ def control(x, control_net):
 
 
 if __name__ == "__main__":
-    from neural_contraction.Quadrotor import CONTROLLER
+    from neural_contraction.Propofol import CONTROLLER
 
     jnp.savez(
         CONTROLLER / "eq.npz", K_eq=K_eq, x_eq=x_eq, u_eq=u_eq, Th_eq=Th_eq, Q=Q, R=R
