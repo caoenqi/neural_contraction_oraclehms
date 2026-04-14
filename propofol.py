@@ -44,8 +44,8 @@ class HRPropofol(irx.System):
         # Parameters used in equations
         self.Ka = self.Kv*self.Kav
         self.Kvu = self.K2 * (self.KR/self.tau_r)
-        #TODO: gotta be a cleaner way of doing this, can we add operators for */ b/t float and Interval?
-        self.Pr = irx.interval(1., 1.)/self.tau_r if isinstance(self.tau_r, irx.Interval) else 1./self.tau_r
+        
+        self.Pr = 1./self.tau_r
         self.Kr = self.KR/self.tau_r
 
         # Propofol Parameters
@@ -59,9 +59,9 @@ class HRPropofol(irx.System):
         self.k31 = params['k31']
 
         # Constants / Calculations
-        self.Va0 = irx.interval(0.3, 0.3) * self.V0 if isinstance(self.V0, irx.Interval) else 0.3 * self.V0
-        self.Vv0 = irx.interval(0.7, 0.7) * self.V0 if isinstance(self.V0, irx.Interval) else 0.7 * self.V0
-        self.Pv0 = irx.interval(6.0, 6.0) if isinstance(self.V0, irx.Interval) else 6.0
+        self.Va0 = 0.3 * self.V0
+        self.Vv0 = 0.7 * self.V0
+        self.Pv0 = 6.0
         self.Vp0 = self.V0 - (self.H0 * self.V0)
 
         # Unstressed Volume
@@ -116,7 +116,7 @@ class HRPropofol(irx.System):
         # JF = self.Kp*(Va + Vv - self.Va0 - self.Vv0 - rF)
         JF = -self.Kp*(self.Va0 + self.Vv0 + rF - Va - Vv) # flip sign because interval shenanigans
         # rF_dot = ((1./(1+self.alpha_I))*JI - (1./(1+self.alpha_H))*JH)
-        rF_dot = ((irx.interval(1., 1.)/(self.alpha_I+1.))*JI - (irx.interval(1., 1.)/(self.alpha_H+1.))*JH) if isinstance(self.alpha_I, irx.Interval) or isinstance(self.alpha_H, irx.Interval) else ((1./(1+self.alpha_I))*JI - (1./(1+self.alpha_H))*JH)
+        rF_dot = ((1./(1+self.alpha_I))*JI - (1./(1+self.alpha_H))*JH)
         # Blood Circulation
         # Va_dot = Q - ((Pa-Pv)/R) - JH - JF
         Va_dot = -(((Pa-Pv)/R) + JH + JF - Q) # flip sign because interval shenanigans
@@ -149,12 +149,7 @@ class HRPropofol(irx.System):
             Ce_dot
             ]
         
-        if isinstance(Va_dot, irx.Interval):
-            final_outputs[2] = irx.interval(Vr_dot, Vr_dot) if not isinstance(Vr_dot, irx.Interval) else Vr_dot # Vr_dot is not guaranteed to be an interval from interval params
-            # print(final_outputs)
-            return final_outputs * self.scaling
-        else:
-            return jnp.array(final_outputs) * self.scaling
+        return jnp.array(final_outputs) * self.scaling
 
 
 # read parameter sets from csv
