@@ -8,8 +8,10 @@ from functools import partial
 import optax
 
 from ncm_trainer import NCMTrainer
-from quadrotor import (
-    Quadrotor,
+from propofol import (
+    HRPropofol,
+    cur_params,
+    inputs,
     x_eq,
     u_eq,
     ncm,
@@ -25,7 +27,7 @@ from quadrotor import (
 device = "gpu"
 jit = partial(eqx.filter_jit, backend=device)
 
-sys = Quadrotor()
+sys = HRPropofol(cur_params)
 print(sys.f(0.0, x_eq, u_eq))
 
 # Hyperparameters for training
@@ -49,27 +51,39 @@ trainer = NCMTrainer(
 # %%
 
 # ix_gen: linearly grows perturbation from 1% to 100% of max over num_pert levels.
-_pert_max = jnp.array(
-    [
-        10.0,
-        10.0,
-        10.0,
-        5.0,
-        5.0,
-        5.0,
-        9.81 / 3.0,
-        jnp.pi / 8.0,
-        jnp.pi / 8.0,
-        jnp.pi / 2.0,
-    ]
-)
+_interval_max = jnp.array([0.983568240,
+2.17185407,
+0.758232405,
+0.0,
+0.0,
+4.33893652,
+0.0,
+27.6860217,
+72.8639679,
+180.680146,
+2.37861721
+])
+_max_diff = _interval_max - x_eq
+_interval_min = jnp.array([0.0,
+0.0,
+0.0,
+-0.605837295,
+-948.155976,
+0.0,
+-948.155976,
+0.0,
+0.0,
+0.0,
+0.0
+])
+_min_diff = _interval_min - x_eq
+
 _num_levels = 100
 
 
 def ix_gen(i):
-    alpha = i / (_num_levels - 1)
-    pert = _pert_max * (0.01 + alpha * 0.99)
-    return irx.icentpert(x_eq, pert)
+    alpha = i / _num_levels
+    return irx.interval(x_eq + alpha * _min_diff, x_eq + alpha * _max_diff)
 
 
 # %%
