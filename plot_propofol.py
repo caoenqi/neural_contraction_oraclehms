@@ -128,43 +128,43 @@ def _drone_arms_world(pos, phi, theta, psi):
 # --------------------------------------------------------------------------- #
 
 
-def plot_static(mc_trajs, x_ref_traj, mc_N):
-    fig = plt.figure(figsize=(7, 7))
-    ax = fig.add_subplot(111, projection="3d")
+# def plot_static(mc_trajs, x_ref_traj, mc_N):
+#     fig = plt.figure(figsize=(7, 7))
+#     ax = fig.add_subplot(111, projection="3d")
 
-    for i in range(0, mc_N, 10):
-        ax.plot(
-            onp.array(mc_trajs.ys[i, :, 0]),
-            onp.array(mc_trajs.ys[i, :, 1]),
-            onp.array(mc_trajs.ys[i, :, 2]),
-            color="gray",
-            alpha=1.0,
-            lw=0.8,
-        )
-        pos = onp.array(mc_trajs.ys[i, 0, :3])
-        arms = _drone_arms_world(
-            pos, mc_trajs.ys[i, 0, 7], mc_trajs.ys[i, 0, 8], mc_trajs.ys[i, 0, 9]
-        )
-        ax.plot(
-            arms[0, :, 0], arms[0, :, 1], arms[0, :, 2], color="gray", lw=1.5, alpha=1.0
-        )
-        ax.plot(
-            arms[1, :, 0], arms[1, :, 1], arms[1, :, 2], color="gray", lw=1.5, alpha=1.0
-        )
+#     for i in range(0, mc_N, 10):
+#         ax.plot(
+#             onp.array(mc_trajs.ys[i, :, 0]),
+#             onp.array(mc_trajs.ys[i, :, 1]),
+#             onp.array(mc_trajs.ys[i, :, 2]),
+#             color="gray",
+#             alpha=1.0,
+#             lw=0.8,
+#         )
+#         pos = onp.array(mc_trajs.ys[i, 0, :3])
+#         arms = _drone_arms_world(
+#             pos, mc_trajs.ys[i, 0, 7], mc_trajs.ys[i, 0, 8], mc_trajs.ys[i, 0, 9]
+#         )
+#         ax.plot(
+#             arms[0, :, 0], arms[0, :, 1], arms[0, :, 2], color="gray", lw=1.5, alpha=1.0
+#         )
+#         ax.plot(
+#             arms[1, :, 0], arms[1, :, 1], arms[1, :, 2], color="gray", lw=1.5, alpha=1.0
+#         )
 
-    ax.plot(
-        x_ref_traj[:, 0],
-        x_ref_traj[:, 1],
-        x_ref_traj[:, 2],
-        color="red",
-        alpha=0.2,
-        label="Reference",
-    )
-    ax.set_xlabel("$p_x$")
-    ax.set_ylabel("$p_y$")
-    ax.set_zlabel("$p_z$")
-    fig.tight_layout()
-    return fig
+#     ax.plot(
+#         x_ref_traj[:, 0],
+#         x_ref_traj[:, 1],
+#         x_ref_traj[:, 2],
+#         color="red",
+#         alpha=0.2,
+#         label="Reference",
+#     )
+#     ax.set_xlabel("$Va$")
+#     ax.set_ylabel("$Vv$")
+#     ax.set_zlabel("$rF$")
+#     fig.tight_layout()
+#     return fig
 
 def plot_states_time(mc_trajs, ts, x_ref_traj, ix, mc_N):
     state_names = [
@@ -362,11 +362,11 @@ mc_controls = onp.array(
 )  # (mc_N, T, 4)
 u_ref_traj = jax.vmap(u_ff)(ts)  # (T, 4)
 
-fig = plot_static(mc_trajs, x_ref_traj, mc_N)
-fig.savefig(out_dir / "states_static.png", dpi=150)
-fig.savefig(out_dir / "states_static.pdf")
-plt.close(fig)
-print("  Saved states_static")
+# fig = plot_static(mc_trajs, x_ref_traj, mc_N)
+# fig.savefig(out_dir / "states_static.png", dpi=150)
+# fig.savefig(out_dir / "states_static.pdf")
+# plt.close(fig)
+# print("  Saved states_static")
 
 fig = plot_states_time(mc_trajs, ts, x_ref_traj, ix, mc_N)
 fig.savefig(out_dir / "states_time.png", dpi=150)
@@ -380,7 +380,7 @@ fig.savefig(out_dir / "controls_time.pdf")
 plt.close(fig)
 print("  Saved controls_time")
 
-save_video(mc_trajs, ts, x_ref_traj, ix, mc_N, out_dir / "video.mp4")
-print("  Saved video.mp4")
+# save_video(mc_trajs, ts, x_ref_traj, ix, mc_N, out_dir / "video.mp4")
+# print("  Saved video.mp4")
 
 # %%
